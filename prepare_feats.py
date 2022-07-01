@@ -36,6 +36,22 @@ def cleanhtml(raw_html):
 
     return cleantext, selected_tags_list
 
+def mapping_cefr2num(scale):
+
+    mapping_dict = {
+        0: 0,
+        'preA1': 1,
+        'A1': 2,
+        'A1+': 3,
+        'A2': 4,
+        'A2+': 5,
+        'B1': 6,
+        'B1+': 7,
+        'B2': 8,
+    }
+
+    return mapping_dict[scale]
+
 ## Data preparation
 """
 The experiments in our work were performed on responses collected to Cambridge Assessment's [BULATs examination](https://www.cambridgeenglish.org/exams-and-tests/bulats), which is not publicly available. However, you can provide any TSV file (containing a header) of transcriptions containing the following columns:
@@ -142,8 +158,17 @@ if __name__ == '__main__':
         for _, stage_info_list in stages_dict.items():
             utt_text_list.extend(stage_info_list)
 
-        utt_text_dict.setdefault(utt_id, " ".join(utt_text_list))
+    # BUG: fix empty token to avoid the problem of POS max tokens len
+        token_list = [ token for token in " ".join(utt_text_list).split() if token != '']
+        utt_text_dict.setdefault(utt_id, " ".join(token_list))
 
     with open(args.output_text_file_path, 'w') as f:
+        f.write("{}\t{}\n".format('text', 'score'))
         for utt_id, text in utt_text_dict.items():
-            f.write("{} {}\n".format(utt_id, text))
+            f.write("{}\t{}\n".format(
+                text,
+                mapping_cefr2num(
+                    cefr_file_path_dict[utt_id]
+                    )
+                )
+            )

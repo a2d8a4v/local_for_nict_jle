@@ -9,11 +9,6 @@ import parselmouth
 import numpy as np
 from statistics import mean, median
 from parselmouth.praat import run_file
-# from textgrid_ops import (
-#     ctm_to_textgrid,
-#     parse_ctm
-# )
-# from textgrid import *
 
 def pickleStore(savethings , filename):
     dbfile = open( filename , 'wb' )
