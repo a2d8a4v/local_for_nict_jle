@@ -1,11 +1,39 @@
 import re
+import argparse
 
 from tqdm import tqdm
-import argparse
 from espnet.utils.cli_utils import strtobool
 from utils.utilities import (
     open_utt2value
 )
+
+# mapping_dict = {
+#     0: 0,
+#     'preA1': 1,
+#     'A1': 2,
+#     'A1+': 3,
+#     'A2': 4,
+#     'A2+': 5,
+#     'B1': 6,
+#     'B1+': 7,
+#     'B2': 8,
+# }
+
+mapping_dict = {
+    0: 0,
+    'A1': 1,
+    'A1+': 2,
+    'A2': 3,
+    'A2+': 4,
+    'B1': 5,
+    'B1+': 6,
+    'B2': 7
+}
+
+def nullable_string(val):
+    if val.lower() == 'none':
+        return None
+    return val
 
 def argparse_function():
     parser = argparse.ArgumentParser()
@@ -26,6 +54,14 @@ def argparse_function():
                     default='CEFR_LABELS_PATH/trn_cefr_scores.txt',
                     type=str)
 
+    parser.add_argument("--get_specific_labels",
+                    default=None,
+                    type=nullable_string)
+
+    parser.add_argument("--skip_preA1",
+                    default=True,
+                    type=strtobool)
+
     args = parser.parse_args()
 
     return args
@@ -37,19 +73,6 @@ def cleanhtml(raw_html):
     return cleantext, selected_tags_list
 
 def mapping_cefr2num(scale):
-
-    mapping_dict = {
-        0: 0,
-        'preA1': 1,
-        'A1': 2,
-        'A1+': 3,
-        'A2': 4,
-        'A2+': 5,
-        'B1': 6,
-        'B1+': 7,
-        'B2': 8,
-    }
-
     return mapping_dict[scale]
 
 ## Data preparation
@@ -73,6 +96,11 @@ if __name__ == '__main__':
     # variables
     special_tags_tokens_list = ['<OL>']
     utt_text_dict = dict()
+    get_specific_labels = args.get_specific_labels
+    skip_preA1 = args.skip_preA1
+
+    if get_specific_labels is not None:
+        assert get_specific_labels in mapping_dict.keys(), "get_specific_labels was given out-of-domain label!"
 
     text_file_path_dict = open_utt2value(args.input_text_list_file_path)
     sst_file_path_dict = open_utt2value(args.input_score_label_file_path)
@@ -162,13 +190,41 @@ if __name__ == '__main__':
         token_list = [ token for token in " ".join(utt_text_list).split() if token != '']
         utt_text_dict.setdefault(utt_id, " ".join(token_list))
 
+    if get_specific_labels is not None:
+        count_cefr_labels = 0
+
     with open(args.output_text_file_path, 'w') as f:
-        f.write("{}\t{}\n".format('text', 'score'))
+        f.write("{}\t{}\t{}\n".format('score', 'sst', 'text'))
         for utt_id, text in utt_text_dict.items():
-            f.write("{}\t{}\n".format(
-                text,
-                mapping_cefr2num(
-                    cefr_file_path_dict[utt_id]
+
+            if skip_preA1:
+                if cefr_file_path_dict[utt_id].lower() == 'prea1':
+                    continue
+
+            if get_specific_labels is not None:
+                if get_specific_labels.lower() == cefr_file_path_dict[utt_id].lower():
+                    f.write("{}\t{}\t{}\n".format(
+                            mapping_cefr2num(
+                                cefr_file_path_dict[utt_id]
+                            ),
+                            sst_file_path_dict[utt_id],
+                            text
+                        )
+                    )
+                    count_cefr_labels+=1
+            else:
+                f.write("{}\t{}\t{}\n".format(
+                        mapping_cefr2num(
+                            cefr_file_path_dict[utt_id]
+                        ),
+                        sst_file_path_dict[utt_id],
+                        text
                     )
                 )
+
+    if get_specific_labels is not None:
+        print("{} has {} utterances.".format(
+                get_specific_labels,
+                count_cefr_labels
             )
+        )
