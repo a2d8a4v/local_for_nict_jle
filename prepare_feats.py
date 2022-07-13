@@ -50,6 +50,10 @@ def argparse_function():
                         default='CEFR_LABELS_PATH/trn_cefr_scores.txt',
                         type=str)
 
+    parser.add_argument("--input_spk2momlang_file_path",
+                        default='data/trn/momlanguage',
+                        type=nullable_string)
+
     parser.add_argument("--output_text_file_path",
                     default='CEFR_LABELS_PATH/trn_cefr_scores.txt',
                     type=str)
@@ -57,6 +61,14 @@ def argparse_function():
     parser.add_argument("--get_specific_labels",
                     default=None,
                     type=nullable_string)
+
+    parser.add_argument("--remove_punctuation",
+                    default=True,
+                    type=strtobool)
+
+    parser.add_argument("--convert_meaningless2unk_tokens",
+                    default=True,
+                    type=strtobool)
 
     parser.add_argument("--skip_preA1",
                     default=True,
@@ -67,13 +79,29 @@ def argparse_function():
     return args
 
 def cleanhtml(raw_html):
-    cleantext = re.sub(CLEANR, '', raw_html)
+    regex = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
+    cleantext = re.sub(regex, '', raw_html)
     selected_tags_list = re.findall('(<.*?>)', raw_html)
 
     return cleantext, selected_tags_list
 
 def mapping_cefr2num(scale):
     return mapping_dict[scale]
+
+def clean_text(text):
+    # remove numbers
+    text_nonum = re.sub(r'\d+', '', text)
+    # remove punctuations and convert characters to lower case
+    text_nopunct = "".join([char.lower() for char in text_nonum if char not in string.punctuation]) 
+    # substitute multiple whitespace with single whitespace
+    # Also, removes leading and trailing whitespaces
+    text_no_doublespace = re.sub('\s+', ' ', text_nopunct).strip()
+    return text_no_doublespace
+
+def replace_meaningless2unks(text):
+    regex = re.compile(r'(XXX)[0-9]{2}')
+    cleantext = re.sub(regex, '<unk>', text)
+    return cleantext
 
 ## Data preparation
 """
@@ -90,21 +118,27 @@ if __name__ == '__main__':
     # argparse
     args = argparse_function()
 
-    # as per recommendation from @freylis, compile once only
-    CLEANR = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
-
     # variables
     special_tags_tokens_list = ['<OL>']
     utt_text_dict = dict()
     get_specific_labels = args.get_specific_labels
     skip_preA1 = args.skip_preA1
+    convert_meaningless2unk_tokens = args.convert_meaningless2unk_tokens
+    remove_punctuation = args.remove_punctuation
 
     if get_specific_labels is not None:
         assert get_specific_labels in mapping_dict.keys(), "get_specific_labels was given out-of-domain label!"
 
+    if remove_punctuation:
+        import string
+        import re
+        import nltk
+        from nltk.tokenize import TweetTokenizer
+
     text_file_path_dict = open_utt2value(args.input_text_list_file_path)
     sst_file_path_dict = open_utt2value(args.input_score_label_file_path)
     cefr_file_path_dict = open_utt2value(args.input_cefr_label_file_path)
+    utt_momlang_dict = open_utt2value(args.input_spk2momlang_file_path)
 
     for utt_id, utt_text_file_path in tqdm(text_file_path_dict.items()):
 
@@ -185,42 +219,58 @@ if __name__ == '__main__':
 
         for _, stage_info_list in stages_dict.items():
             utt_text_list.extend(stage_info_list)
+        text = " ".join(utt_text_list)
 
-    # BUG: fix empty token to avoid the problem of POS max tokens len
-        token_list = [ token for token in " ".join(utt_text_list).split() if token != '']
+        if convert_meaningless2unk_tokens:
+            text = replace_meaningless2unks(text)
+
+        if remove_punctuation:
+            text = clean_text(text)
+
+        # BUG: fix empty token to avoid the problem of POS max tokens len
+        token_list = [ token for token in text.split() if token != '' ]
         utt_text_dict.setdefault(utt_id, " ".join(token_list))
 
     if get_specific_labels is not None:
         count_cefr_labels = 0
 
+    max_seq_len = 0
     with open(args.output_text_file_path, 'w') as f:
-        f.write("{}\t{}\t{}\n".format('score', 'sst', 'text'))
+        f.write("{}\t{}\t{}\t{}\n".format('score', 'sst', 'l1', 'text'))
         for utt_id, text in utt_text_dict.items():
 
             if skip_preA1:
                 if cefr_file_path_dict[utt_id].lower() == 'prea1':
                     continue
 
+            if len(text.split()) > max_seq_len:
+                max_seq_len = len(text.split())
+
             if get_specific_labels is not None:
                 if get_specific_labels.lower() == cefr_file_path_dict[utt_id].lower():
-                    f.write("{}\t{}\t{}\n".format(
+                    f.write("{}\t{}\t{}\t{}\n".format(
                             mapping_cefr2num(
                                 cefr_file_path_dict[utt_id]
                             ),
                             sst_file_path_dict[utt_id],
+                            utt_momlang_dict[utt_id],
                             text
                         )
                     )
                     count_cefr_labels+=1
             else:
-                f.write("{}\t{}\t{}\n".format(
+                f.write("{}\t{}\t{}\t{}\n".format(
                         mapping_cefr2num(
                             cefr_file_path_dict[utt_id]
                         ),
                         sst_file_path_dict[utt_id],
+                        utt_momlang_dict[utt_id],
                         text
                     )
                 )
+
+    if max_seq_len > 0:
+        print("Max length from all sequences is {}".format(max_seq_len))
 
     if get_specific_labels is not None:
         print("{} has {} utterances.".format(
