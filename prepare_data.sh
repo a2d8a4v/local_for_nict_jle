@@ -63,7 +63,7 @@ if [ $stage -le 0 ] && [ $stop_stage -ge 0 ] ; then
             cat $CEFR_LABELS_PATH/${i}_sst_scores.txt | cut -f1 -d$'\t' > data/$i/utt_id.list
             awk 'NR==FNR{tgts[$1]; next} $1 in tgts' data/$i/utt_id.list data/$i/text.${src} > data/$i/text_list
             awk 'NR==FNR{tgts[$1]; next} $1 in tgts' data/$i/utt_id.list data/$i/momlanguage.tmp > data/$i/momlanguage
-            python local.nict_jle/prepare_feats.py \
+            python local.nict_jle/prepare/prepare_feats.py \
                 --input_text_list_file_path data/$i/text_list \
                 --input_score_label_file_path $CEFR_LABELS_PATH/${i}_sst_scores.txt \
                 --input_cefr_label_file_path $CEFR_LABELS_PATH/${i}_cefr_scores.txt \
@@ -106,7 +106,7 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ] ; then
             cat $CEFR_LABELS_PATH/{trn_cefr_scores.txt,dev_cefr_scores.txt,eval_cefr_scores.txt} > data/$i/cefr_scores.txt
             cat $CEFR_LABELS_PATH/{trn_sst_scores.txt,dev_sst_scores.txt,eval_sst_scores.txt} > data/$i/stt_scores.txt
             cat data/{trn,dev,eval}/momlanguage > data/$i/momlanguage
-            python local.nict_jle/prepare_feats.py \
+            python local.nict_jle/prepare/prepare_feats.py \
                 --input_text_list_file_path data/$i/text_list \
                 --input_score_label_file_path data/$i/stt_scores.txt \
                 --input_cefr_label_file_path data/$i/cefr_scores.txt \
