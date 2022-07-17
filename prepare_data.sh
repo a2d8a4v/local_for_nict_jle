@@ -14,6 +14,10 @@ CORPUS_DIR_PATH=NICT_JLE_4.1
 CEFR_LABELS_PATH=nict_jle_cambridge_labels
 remove_punctuation=true
 convert_meaningless2unk_tokens=true
+skip_preA1=false
+remove_laughter_token=true
+fix_ok_token=true
+remove_filled_pauses=true
 
 . ./utils/parse_options.sh
 set -euo pipefail
@@ -70,7 +74,11 @@ if [ $stage -le 0 ] && [ $stop_stage -ge 0 ] ; then
                 --input_spk2momlang_file_path data/$i/momlanguage \
                 --output_text_file_path data/$i/text.tsv \
                 --remove_punctuation $remove_punctuation \
-                --convert_meaningless2unk_tokens $convert_meaningless2unk_tokens
+                --convert_meaningless2unk_tokens $convert_meaningless2unk_tokens \
+                --skip_preA1 $skip_preA1 \
+                --remove_laughter_token $remove_laughter_token \
+                --fix_ok_token $fix_ok_token \
+                --remove_filled_pauses $remove_filled_pauses
             rm data/$i/utt_id.list data/$i/text.${src} data/$i/text_list data/$i/momlanguage.tmp
         done
     done
@@ -114,7 +122,11 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ] ; then
                 --output_text_file_path data/$i/text.tsv \
                 --remove_punctuation $remove_punctuation \
                 --convert_meaningless2unk_tokens $convert_meaningless2unk_tokens \
-                --get_specific_labels $specific_scale
+                --get_specific_labels $specific_scale \
+                --skip_preA1 $skip_preA1 \
+                --remove_laughter_token $remove_laughter_token \
+                --fix_ok_token $fix_ok_token \
+                --remove_filled_pauses $remove_filled_pauses
             rm data/$i/cefr_scores.txt data/$i/stt_scores.txt data/$i/text_list
         done
     done

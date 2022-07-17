@@ -16,6 +16,9 @@ assign_native_sst=10
 remove_punctuation=true
 convert_meaningless2unk_tokens=true
 skip_preA1=false
+remove_laughter_token=true
+fix_ok_token=true
+remove_filled_pauses=true
 
 . ./utils/parse_options.sh
 set -euo pipefail
@@ -163,7 +166,11 @@ if [ $stage -le 2 ] && [ $stop_stage -ge 2 ] ; then
             --output_text_file_path data/$i/text.tsv \
             --remove_punctuation $remove_punctuation \
             --convert_meaningless2unk_tokens $convert_meaningless2unk_tokens \
-            --skip_preA1 $skip_preA1
+            --skip_preA1 $skip_preA1 \
+            --remove_laughter_token $remove_laughter_token \
+            --fix_ok_token $fix_ok_token \
+            --remove_filled_pauses $remove_filled_pauses
+
     done
     rm data/$i/text_list $text_files data/$i/momlanguage.*
 fi

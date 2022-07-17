@@ -56,6 +56,18 @@ def argparse_function():
                     default=True,
                     type=strtobool)
 
+    parser.add_argument("--remove_laughter_token",
+                    default=True,
+                    type=strtobool)
+
+    parser.add_argument("--fix_ok_token",
+                    default=True,
+                    type=strtobool)
+
+    parser.add_argument("--remove_filled_pauses",
+                    default=True,
+                    type=strtobool)
+
     parser.add_argument("--skip_preA1",
                     default=False,
                     type=strtobool)
@@ -89,6 +101,30 @@ def replace_meaningless2unks(text):
     cleantext = re.sub(regex, '<unk>', text)
     return cleantext
 
+def remove_filled_pauses_nict_jle(text):
+    filled_pauses_list = [
+        'mm', 'erm', 'er', 'err', 'urr', 'uhm', 'uh', 'um', 'hmm', 'mhhmm', 'ah',
+        'mhmm', 'urrr', 'urrrr', 'uhmm', 'eh', 'nh', 'ahm', 'errm', 'eeh', 'hm',
+        'eeto', 'uhhuh', 'urrrm', 'ummmy', 'mmhm', 'mhmhuh', 'uhhum', 'uunto', 'huhuh',
+        'uhu', 'ahhh', 'nn', 'mmhmm', 'urm'
+
+    ]
+    n = []
+    for token in text.split():
+        if token not in filled_pauses_list:
+            n.append(token)
+    return " ".join(n)
+
+def remove_laugher(text):
+    n = []
+    for token in text.split():
+        if token != 'laugher':
+            n.append(token)
+    return " ".join(n)
+
+def fix_ok(text):
+    return text.replace(' o k ', ' ok ')
+
 ## Data preparation
 """
 The experiments in our work were performed on responses collected to Cambridge Assessment's [BULATs examination](https://www.cambridgeenglish.org/exams-and-tests/bulats), which is not publicly available. However, you can provide any TSV file (containing a header) of transcriptions containing the following columns:
@@ -111,6 +147,9 @@ if __name__ == '__main__':
     skip_preA1 = args.skip_preA1
     convert_meaningless2unk_tokens = args.convert_meaningless2unk_tokens
     remove_punctuation = args.remove_punctuation
+    remove_laughter_token = args.remove_laughter_token
+    fix_ok_token = args.fix_ok_token
+    remove_filled_pauses = args.remove_filled_pauses
     output_text_file_path = args.output_text_file_path
 
     if get_specific_labels is not None:
@@ -213,6 +252,15 @@ if __name__ == '__main__':
 
         if remove_punctuation:
             text = clean_text(text)
+
+        if remove_laughter_token:
+            text = remove_laugher(text)
+
+        if fix_ok_token:
+            text = fix_ok(text)
+        
+        if remove_filled_pauses:
+            text = remove_filled_pauses_nict_jle(text)
 
         # BUG: fix empty token to avoid the problem of POS max tokens len
         token_list = [ token for token in text.split() if token != '' ]
