@@ -1,3 +1,4 @@
+import io
 import os
 import re
 import sys
@@ -11,29 +12,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "local.nict_jle/uti
 from utilities import (
     open_utt2value
 )
-
-# mapping_dict = {
-#     0: 0,
-#     'preA1': 1,
-#     'A1': 2,
-#     'A1+': 3,
-#     'A2': 4,
-#     'A2+': 5,
-#     'B1': 6,
-#     'B1+': 7,
-#     'B2': 8,
-# }
-
-mapping_dict = {
-    0: 0,
-    'A1': 1,
-    'A1+': 2,
-    'A2': 3,
-    'A2+': 4,
-    'B1': 5,
-    'B1+': 6,
-    'B2': 7
-}
+from defined_scales import (
+    mapping_dict
+)
 
 def nullable_string(val):
     if val.lower() == 'none':
@@ -76,7 +57,7 @@ def argparse_function():
                     type=strtobool)
 
     parser.add_argument("--skip_preA1",
-                    default=True,
+                    default=False,
                     type=strtobool)
 
     args = parser.parse_args()
@@ -130,6 +111,7 @@ if __name__ == '__main__':
     skip_preA1 = args.skip_preA1
     convert_meaningless2unk_tokens = args.convert_meaningless2unk_tokens
     remove_punctuation = args.remove_punctuation
+    output_text_file_path = args.output_text_file_path
 
     if get_specific_labels is not None:
         assert get_specific_labels in mapping_dict.keys(), "get_specific_labels was given out-of-domain label!"
@@ -155,9 +137,9 @@ if __name__ == '__main__':
         stage_num_now = 0
         utt_text_list = []
 
-        with open(utt_text_file_path, 'r') as f:
+        with io.open(utt_text_file_path, 'rb') as f:
             for line in f.readlines():
-                line = line.strip().replace('\n','')
+                line = line.decode('utf-8', 'ignore').strip().replace('\n','').replace('\r','')
                 if line == '':
                     continue
                 xml_list.append(line)
@@ -240,7 +222,7 @@ if __name__ == '__main__':
         count_cefr_labels = 0
 
     max_seq_len = 0
-    with open(args.output_text_file_path, 'w') as f:
+    with open(output_text_file_path, 'w') as f:
         f.write("{}\t{}\t{}\t{}\t{}\n".format('id', 'score', 'sst', 'l1', 'text'))
         for utt_id, text in utt_text_dict.items():
 

@@ -13,6 +13,9 @@ specific_sst=
 CORPUS_DIR_PATH=NICT_JLE_4.1
 CEFR_LABELS_PATH=nict_jle_cambridge_labels
 assign_native_sst=10
+remove_punctuation=true
+convert_meaningless2unk_tokens=true
+skip_preA1=false
 
 . ./utils/parse_options.sh
 set -euo pipefail
@@ -110,7 +113,7 @@ d="all"
 s="LearnerOriginal Native"
 if [ $stage -le 2 ] && [ $stop_stage -ge 2 ] ; then    
     # prepare training data
-    echo "B. generate new train combo files"
+    echo "C. generate new train combo files"
     for i in $d; do
         mkdir -pv data/${i} > /dev/null 2>&1
     done
@@ -129,7 +132,7 @@ if [ $stage -le 2 ] && [ $stop_stage -ge 2 ] ; then
                     echo 'japanese' >> data/$i/momlanguage.${src}.list
                 elif [ $src == 'Native' ]; then
                     echo 'american' >> data/$i/momlanguage.${src}.list
-                done
+                fi
             done
             paste -d ' ' data/$i/utt_id.list.${src} data/$i/momlanguage.${src}.list > data/$i/momlanguage.${src}
             # delete temporary files
@@ -142,24 +145,25 @@ if [ $stage -le 2 ] && [ $stop_stage -ge 2 ] ; then
     for i in $d; do
         for src in $s; do
             momlanguage_files+="data/$i/momlanguage.${src} "
-            text_files="data/$i/text.${src} "
+            text_files+="data/$i/text.${src} "
         done
     done
+
     for i in $d; do
         cat $momlanguage_files > data/$i/momlanguage
         cat $text_files > data/$i/text_list
     done
 
     for i in $d; do
-        python local.nict_jle/prepare/prepare_feats_with_unannotated.py \
+        python local.nict_jle/prepare/prepare_feats.py \
             --input_text_list_file_path data/$i/text_list \
             --input_score_label_file_path data/$i/${i}_sst_scores.txt \
             --input_cefr_label_file_path data/$i/${i}_cefr_scales.txt \
             --input_spk2momlang_file_path data/$i/momlanguage \
             --output_text_file_path data/$i/text.tsv \
             --remove_punctuation $remove_punctuation \
-            --convert_meaningless2unk_tokens $convert_meaningless2unk_tokens
-        
+            --convert_meaningless2unk_tokens $convert_meaningless2unk_tokens \
+            --skip_preA1 $skip_preA1
     done
-    rm data/$i/text_list data/$i/text.* data/$i/momlanguage.*
+    rm data/$i/text_list $text_files data/$i/momlanguage.*
 fi

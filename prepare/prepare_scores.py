@@ -57,10 +57,10 @@ if __name__ == '__main__':
     
     # retrieve sst score
     utt2stt_dict = {}
-    for utt_id, utt_text_file_path in tqdm(text_file_path_dict.items()):
+    for i, (utt_id, utt_text_file_path) in enumerate(tqdm(text_file_path_dict.items())):
 
         # variable
-        xml_list = []
+        sst_level_tags_list = []
 
         # for Native
         if utt_id[0] == 'N':
@@ -69,20 +69,18 @@ if __name__ == '__main__':
 
         with io.open(utt_text_file_path, 'rb') as f:
             for line in f.readlines():
-                line = line.decode('utf8').strip().replace('\n','').replace('\r','')
+                line = line.decode('utf-8', 'ignore').strip().replace('\n','').replace('\r','')
                 if line == '':
                     continue
-                xml_list.append(line)
 
-        for xml_line in xml_list:
-            
-            # filter out the end tag toekns
-            if xml_line[:11] != "<SST_level>":
-                continue
-        
-            sst_score = get_token(xml_line)
+                # filter out the end tag toekns
+                if line[:11] == "<SST_level>":
+                    sst_level_tags_list.append(line)
+                    break
+
+        for sst_tag in sst_level_tags_list:
+            sst_score, _ = get_token(sst_tag)
             utt2stt_dict[utt_id] = sst_score
-            break
 
     # save
     with io.open(output_scores_file_path, 'w') as f:
