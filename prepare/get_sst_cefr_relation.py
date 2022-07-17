@@ -79,7 +79,7 @@ if __name__ == '__main__':
             print("{} and {} are not one-to-one or one-to-many mapping".format(input_sst_label_file_path, input_scale_label_file_path))
             print("Error terms are sst-{} and sst-{}, {} and {}, respectively.".format(i, i+1, saved_range_list[i], saved_range_list[i+1]))
 
-    assert check == False, 'Mapping is not exist!'
+    assert check == False, 'Mapping does not exist!'
 
     # save
     reversed_mapping_dict = { idx:scale for scale, idx in mapping_dict.items() }
